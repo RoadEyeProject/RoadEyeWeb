@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Stream</title>
+</head>
+<body>
+<h1>Camera Stream</h1>
+<video id="video" autoplay playsinline></video>
+<script>
+    const videoElement = document.getElementById('video');
+
+    // Access the camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+            videoElement.srcObject = stream;
+
+            // Send video frames to the server (WebSocket example)
+            const socket = new WebSocket('ws://localhost:3000');
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            setInterval(() => {
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                // Convert the frame to a Base64 string
+                const frame = canvas.toDataURL('image/jpeg');
+                socket.send(frame);
+            }, 100); // Send a frame every 100ms
+        })
+        .catch((error) => {
+            console.error('Error accessing the camera:', error);
+        });
+</script>
+</body>
+</html>
