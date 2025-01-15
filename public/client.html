@@ -17,7 +17,11 @@
             videoElement.srcObject = stream;
 
             // Send video frames to the server (WebSocket example)
-            const socket = new WebSocket('ws://localhost:3000');
+            const socket = new WebSocket('wss://610a-77-137-30-226.ngrok-free.app');
+            socket.onopen = () => console.log('WebSocket connection opened');
+            socket.onmessage = (message) => console.log('Server says:', message.data);
+            socket.onerror = (error) => console.error('WebSocket error:', error);
+            socket.onclose = () => console.log('WebSocket connection closed');
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
 
@@ -29,7 +33,7 @@
                 // Convert the frame to a Base64 string
                 const frame = canvas.toDataURL('image/jpeg');
                 socket.send(frame);
-            }, 100); // Send a frame every 100ms
+            }, 500); // Send a frame every 100ms
         })
         .catch((error) => {
             console.error('Error accessing the camera:', error);
