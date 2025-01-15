@@ -1,0 +1,27 @@
+{
+  "name": "roadeye",
+  "version": "1.0.0",
+  "description": "final project in Data Science",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RoadEyeProject/RoadEye.git"
+  },
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.2",
+    "ngrok": "^5.0.0-beta.2",
+    "ws": "^8.18.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RoadEyeProject/RoadEye/issues"
+  },
+  "homepage": "https://github.com/RoadEyeProject/RoadEye#readme"
+}
