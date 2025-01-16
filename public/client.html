@@ -51,6 +51,7 @@
             const context = canvas.getContext('2d');
 
             setInterval(async () => {
+                captureTime =Date.now()
                 canvas.width = videoElement.videoWidth;
                 canvas.height = videoElement.videoHeight;
                 context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
@@ -63,7 +64,7 @@
                     const location = await getLocation();
                     const message = {
                         eventType: 'bad weather',
-                        timestamp: Date.now(),
+                        timestamp: captureTime,
                         location: location,
                         image: frame, // Include the captured frame
                     };

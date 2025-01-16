@@ -40,7 +40,7 @@ wss.on('connection', (ws) => {
                 if (message.image) {
                     const base64Data = message.image.replace(/^data:image\/jpeg;base64,/, '');
                     const buffer = Buffer.from(base64Data, 'base64');
-                    const timestamp = Date.now();
+                    const timestamp = message.timestamp;
                     const filename = `image_${timestamp}.jpg`;
                     const filepath = path.join(imagesDir, filename);
                     fs.writeFileSync(filepath, buffer);
