@@ -13,7 +13,7 @@ client.connect();
 // Function to send messages to a Redis queue
 async function sendMessage(queueName, message) {
     await client.rPush(queueName, JSON.stringify(message));
-    console.log(`Message sent to queue ${queueName}:`, message.length > 100 ? message.slice(0, 100) + '...' : message);
+    console.log(`Message sent to queue: ${queueName}`);
 }
 
 // Create the images directory if it doesn't exist
@@ -33,7 +33,7 @@ wss.on('connection', (ws) => {
     ws.on('message', async (data) => {
         try {
             const message = JSON.parse(data);
-            console.log('Received message:', message.length > 100 ? message.slice(0, 100) + '...' : message);
+            console.log('Received a message');
 
 
                 // Save the image (if present) to the images directory
