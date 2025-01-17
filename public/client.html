@@ -13,7 +13,7 @@
 <script>
     const videoElement = document.getElementById('video');
     const reportButton = document.getElementById('report');
-    const socket = new WebSocket('https://ed14-77-137-30-226.ngrok-free.app');
+    const socket = new WebSocket('https://0d08-77-137-30-226.ngrok-free.app');
 
     socket.onopen = () => console.log('WebSocket connection opened');
     socket.onmessage = (message) => console.log('Server says:', message.data);
@@ -72,7 +72,7 @@
                 } catch (error) {
                     console.error('Error sending frame:', error);
                 }
-            }, 3000); // Capture and send a frame every 3 seconds
+            }, 10000); // Capture and send a frame every 3 seconds
         })
         .catch((error) => {
             console.error('Error accessing the camera:', error);

@@ -25,6 +25,9 @@ if (!fs.existsSync(imagesDir)) {
 const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${port}`);
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
+
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
