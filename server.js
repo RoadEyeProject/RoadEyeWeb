@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
@@ -18,7 +19,7 @@ const client = redis.createClient();
 client.connect();
 
 // MongoDB connection
-mongoose.connect('mongodb+srv://eliranovadia7:NLLs7RUumQ77VXjq@cluster0.vnj0fvt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   }).then(() => {
@@ -64,8 +65,8 @@ passport.use(new LocalStrategy(async (username, password, done) => {
 }));
 
 passport.use(new GoogleStrategy({
-    clientID: 'YOUR_GOOGLE_CLIENT_ID',
-    clientSecret: 'YOUR_GOOGLE_CLIENT_SECRET',
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: 'http://localhost:3000/auth/google/callback'
 }, async (accessToken, refreshToken, profile, done) => {
     const username = profile.emails[0].value;
