@@ -4,11 +4,12 @@ const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const bcrypt = require('bcrypt');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const { WebSocketServer } = require('ws');
 const redis = require('redis');
+const mongoose = require('mongoose');
+const User = require('./models/User');
 
 const app = express();
 const port = 3000;
@@ -16,12 +17,22 @@ const imagesDir = path.join(__dirname, 'images');
 const client = redis.createClient();
 client.connect();
 
+// MongoDB connection
+mongoose.connect('mongodb+srv://eliranovadia7:NLLs7RUumQ77VXjq@cluster0.vnj0fvt.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  }).then(() => {
+    console.log('Connected to MongoDB');
+  }).catch((error) => {
+    console.error('Error connecting to MongoDB:', error);
+  });
+
 app.use(express.static(path.join(__dirname, 'public'), {
-    index: false, // prevent automatic serving of index.html
+    index: false,
     extensions: ['html', 'htm'],
     setHeaders: (res, filePath) => {
         if (path.basename(filePath) === 'camera.html') {
-            res.status(403).end('Access denied'); // prevent direct static access
+            res.status(403).end('Access denied');
         }
     }
 }));
@@ -30,42 +41,43 @@ app.use(session({ secret: 'yourSecretKey', resave: false, saveUninitialized: tru
 app.use(passport.initialize());
 app.use(passport.session());
 
-const db = new sqlite3.Database('./users.db');
-
 passport.serializeUser((user, done) => done(null, user.id));
-passport.deserializeUser((id, done) => {
-    db.get('SELECT * FROM users WHERE id = ?', [id], (err, user) => done(err, user));
+passport.deserializeUser(async (id, done) => {
+    try {
+        const user = await User.findById(id);
+        done(null, user);
+    } catch (err) {
+        done(err);
+    }
 });
 
-passport.use(new LocalStrategy((username, password, done) => {
-    db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
-        if (err) return done(err);
+passport.use(new LocalStrategy(async (username, password, done) => {
+    try {
+        const user = await User.findOne({ username });
         if (!user) return done(null, false, { message: 'Incorrect username.' });
 
-        bcrypt.compare(password, user.password, (err, res) => {
-            if (res) return done(null, user);
-            return done(null, false, { message: 'Incorrect password.' });
-        });
-    });
+        const isMatch = await bcrypt.compare(password, user.password);
+        return done(null, isMatch ? user : false);
+    } catch (err) {
+        return done(err);
+    }
 }));
 
 passport.use(new GoogleStrategy({
     clientID: 'YOUR_GOOGLE_CLIENT_ID',
     clientSecret: 'YOUR_GOOGLE_CLIENT_SECRET',
     callbackURL: 'http://localhost:3000/auth/google/callback'
-}, (accessToken, refreshToken, profile, done) => {
+}, async (accessToken, refreshToken, profile, done) => {
     const username = profile.emails[0].value;
-    db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
-        if (err) return done(err);
+    try {
+        let user = await User.findOne({ username });
         if (!user) {
-            db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, 'google-oauth'], (err) => {
-                if (err) return done(err);
-                return done(null, { id: this.lastID, username });
-            });
-        } else {
-            return done(null, user);
+            user = await User.create({ username, password: 'google-oauth' });
         }
-    });
+        done(null, user);
+    } catch (err) {
+        done(err);
+    }
 }));
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
@@ -77,22 +89,21 @@ app.post('/login', passport.authenticate('local', {
 
 app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public', 'signup.html')));
 
-app.post('/signup', (req, res) => {
+app.post('/signup', async (req, res) => {
     const { username, password } = req.body;
-    bcrypt.hash(password, 10, (err, hash) => {
-        if (err) return res.redirect('/signup');
-        db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash], (err) => {
-            if (err) return res.redirect('/signup');
-            res.redirect('/');
-        });
-    });
+    try {
+        const hash = await bcrypt.hash(password, 10);
+        await User.create({ username, password: hash });
+        res.redirect('/');
+    } catch (err) {
+        res.redirect('/signup');
+    }
 });
 
 app.get('/camera.html', isAuthenticated, (req, res) => {
     res.sendFile(path.join(__dirname, 'protected', 'camera.html'));
 });
 
-// Google OAuth routes (keep for future use)
 app.get('/auth/google', passport.authenticate('google', { scope: ['email', 'profile'] }));
 
 app.get('/auth/google/callback', passport.authenticate('google', {
@@ -100,7 +111,6 @@ app.get('/auth/google/callback', passport.authenticate('google', {
     failureRedirect: '/'
 }));
 
-// WebSocket and Redis logic (unchanged)
 const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${port}`);
 });
@@ -113,7 +123,7 @@ wss.on('connection', (ws) => {
     ws.on('message', async (data) => {
         const message = JSON.parse(data);
         if (message.image) {
-            const base64Data = message.image.replace(/^data:image\/jpeg;base64,/, '');
+            const base64Data = message.image.replace(/^data:image\/(png|jpeg);base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
             const filename = `image_${message.timestamp}.jpg`;
             fs.writeFileSync(path.join(imagesDir, filename), buffer);
@@ -126,8 +136,6 @@ wss.on('connection', (ws) => {
 });
 
 function isAuthenticated(req, res, next) {
-    if (req.isAuthenticated()) {
-        return next();
-    }
+    if (req.isAuthenticated()) return next();
     res.redirect('/');
 }
