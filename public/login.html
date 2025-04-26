@@ -139,17 +139,17 @@
 
   <script>
     const passwordInput = document.getElementById('password');
-    const togglePassword = document.getElementById('togglePassword');
+    //const togglePassword = document.getElementById('togglePassword');
     const loginForm = document.getElementById('loginForm');
     const loginButton = document.getElementById('loginButton');
     const loginText = document.getElementById('loginText');
     const spinner = document.getElementById('spinner');
 
-    togglePassword.addEventListener('click', () => {
-      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      passwordInput.setAttribute('type', type);
-      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
-    });
+    //togglePassword.addEventListener('click', () => {
+     // const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    //  passwordInput.setAttribute('type', type);
+    //  togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    //});
 
     loginForm.addEventListener('submit', (e) => {
       loginButton.disabled = true;
