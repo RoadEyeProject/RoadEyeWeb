@@ -35,8 +35,8 @@
 
 <script>
     const videoElement = document.getElementById('video');
-    const socket = new WebSocket('https://mature-annually-gecko.ngrok-free.app');
-
+    //const socket = new WebSocket('https://mature-annually-gecko.ngrok-free.app');
+    const socket = new WebSocket('https://roadeye.onrender.com');
     socket.onopen = () => console.log('WebSocket connection opened');
     socket.onmessage = (message) => console.log('Server says:', message.data);
     socket.onerror = (error) => console.error('WebSocket error:', error);
