@@ -14,6 +14,7 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 
 const app = express();
+app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 const imagesDir = path.join(__dirname, 'images');
 
@@ -94,7 +95,7 @@ async function startServer() {
             passport.authenticate('local', async (err, user, info) => {
                 if (err) return next(err);
                 if (!user) return res.redirect('/'); 
-        
+
                 const token = jwt.sign({
                     id: user.id,
                 }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -105,7 +106,7 @@ async function startServer() {
                     sameSite: 'strict',
                     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
                 });
-        
+
                 res.redirect('/camera.html');
             })(req, res, next);
         });
