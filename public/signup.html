@@ -1,71 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>Signup</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        form {
-            background-color: #222;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-            width: 320px;
-            text-align: center;
-        }
-        input {
-            padding: 10px;
-            width: 100%;
-            margin-top: 10px;
-            border-radius: 4px;
-            border: none;
-            box-sizing: border-box;
-            font-size: 14px;
-            background-color: #333;
-            color: #fff;
-        }
-        button {
-            padding: 10px;
-            width: 100%;
-            margin-top: 10px;
-            border-radius: 4px;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-            background-color: #2196F3;
-            color: white;
-        }
-        hr {
-            margin: 20px 0;
-            border: 0;
-            height: 1px;
-            background-color: #333;
-        }
-        a {
-            text-decoration: none;
-            color: #aaa;
-            font-size: 14px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Signup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    form {
+      background-color: #222;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+      width: 320px;
+      text-align: center;
+      position: relative;
+    }
+    .input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    input {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: none;
+      box-sizing: border-box;
+      font-size: 14px;
+      background-color: #333;
+      color: #fff;
+    }
+    .toggle-password {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #bbb;
+      font-size: 16px;
+    }
+    .password-hint {
+      color: #aaa;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+    .password-valid {
+      color: #4CAF50;
+    }
+    .password-invalid {
+      color: #f44336;
+    }
+    button {
+      padding: 10px;
+      width: 100%;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      background-color: #2196F3;
+      color: white;
+      position: relative;
+    }
+    .spinner {
+      display: none;
+      margin: auto;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #2196F3;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    hr {
+      margin: 20px 0;
+      border: 0;
+      height: 1px;
+      background-color: #333;
+    }
+    a {
+      text-decoration: none;
+      color: #aaa;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-    <form action="/signup" method="post">
-        <h2>Signup</h2>
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Create Account</button>
-        <hr>
-        <a href="/">Already have an account? Login</a>
-    </form>
+
+  <form id="signupForm" action="/signup" method="post">
+    <h2>Signup</h2>
+
+    <input type="text" name="firstName" placeholder="First Name" required>
+    <input type="text" name="lastName" placeholder="Last Name" required>
+    <input type="email" name="email" placeholder="Email" required>
+
+    <div class="input-wrapper">
+      <input type="password" id="password" name="password" placeholder="Password" required>
+      <button type="button" id="togglePassword" class="toggle-password">👁️</button>
+    </div>
+
+    <div id="passwordHint" class="password-hint">
+      Password must be at least 8 characters, with letters, numbers and special characters.
+    </div>
+
+    <button type="submit" id="signupButton">
+      <span id="signupText">Create Account</span>
+      <div id="spinner" class="spinner"></div>
+    </button>
+
+    <hr>
+
+    <a href="/">Already have an account? Login</a>
+  </form>
+
+  <script>
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const signupForm = document.getElementById('signupForm');
+    const signupButton = document.getElementById('signupButton');
+    const signupText = document.getElementById('signupText');
+    const spinner = document.getElementById('spinner');
+    const passwordHint = document.getElementById('passwordHint');
+
+    function isPasswordStrong(password) {
+      const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      return passwordRegex.test(password);
+    }
+
+    togglePassword.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    });
+
+    passwordInput.addEventListener('input', () => {
+      if (isPasswordStrong(passwordInput.value)) {
+        passwordHint.classList.remove('password-invalid');
+        passwordHint.classList.add('password-valid');
+        passwordHint.textContent = 'Strong password!';
+      } else {
+        passwordHint.classList.remove('password-valid');
+        passwordHint.classList.add('password-invalid');
+        passwordHint.textContent = 'Password must be at least 8 characters, with letters, numbers and special characters.';
+      }
+    });
+
+    signupForm.addEventListener('submit', (e) => {
+      if (!isPasswordStrong(passwordInput.value)) {
+        e.preventDefault();
+        alert('Please enter a stronger password.');
+        return;
+      }
+      signupButton.disabled = true;
+      signupText.style.display = 'none';
+      spinner.style.display = 'block';
+    });
+  </script>
+
 </body>
 </html>

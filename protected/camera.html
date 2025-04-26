@@ -1,100 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RoadEye</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #121212;
-            color: #ffffff;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-        }
-        #video {
-            width: 90%;
-            max-width: 500px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-    </style>
-</head>
-<body>
-<h1>RoadEye Viewport</h1>
-<video id="video" autoplay playsinline muted></video>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RoadEye</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #121212, #1a1a1a);
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
 
-<script>
+    /* Soft radial blur behind video */
+    body::before {
+      content: "";
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(0, 123, 255, 0.2) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      filter: blur(60px);
+      z-index: 0;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      z-index: 1;
+    }
+
+    #video {
+      width: 90%;
+      max-width: 500px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0, 123, 255, 0.6), 0 0 40px rgba(0, 123, 255, 0.3);
+      animation: pulse 4s infinite;
+      z-index: 1;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(0, 123, 255, 0.6), 0 0 40px rgba(0, 123, 255, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 30px rgba(0, 123, 255, 0.8), 0 0 50px rgba(0, 123, 255, 0.4);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>RoadEye Viewport</h1>
+  <video id="video" autoplay playsinline muted></video>
+
+  <script>
     const videoElement = document.getElementById('video');
-    //const socket = new WebSocket('https://mature-annually-gecko.ngrok-free.app');
-    const socket = new WebSocket('wss://roadeyeweb.onrender.com');
+    const token = getCookie('token');
+    const socket = new WebSocket(`wss://${window.location.host}?token=${token}`);
+    
     socket.onopen = () => console.log('WebSocket connection opened');
     socket.onmessage = (message) => console.log('Server says:', message.data);
     socket.onerror = (error) => console.error('WebSocket error:', error);
     socket.onclose = () => console.log('WebSocket connection closed');
 
-    // Function to get precise location
-    async function getLocation() {
-        return new Promise((resolve, reject) => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => resolve({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                    }),
-                    (error) => reject(`Error getting location: ${error.message}`)
-                );
-            } else {
-                reject('Geolocation not supported.');
-            }
-        });
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
     }
 
-    // Access the back camera
+    async function getLocation() {
+      return new Promise((resolve, reject) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }),
+            (error) => reject(`Error getting location: ${error.message}`)
+          );
+        } else {
+          reject('Geolocation not supported.');
+        }
+      });
+    }
+
     navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: { exact: "environment" } }
+      video: { facingMode: { exact: "environment" } }
     })
     .then((stream) => {
-        videoElement.srcObject = stream;
+      videoElement.srcObject = stream;
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
 
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+      setInterval(async () => {
+        const captureTime = Date.now();
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-        setInterval(async () => {
-            const captureTime = Date.now();
-            canvas.width = videoElement.videoWidth;
-            canvas.height = videoElement.videoHeight;
-            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        const frame = canvas.toDataURL('image/jpeg');
 
-            const frame = canvas.toDataURL('image/jpeg');
-
-            try {
-                const location = await getLocation();
-                const message = {
-                    eventType: 'bad weather',
-                    timestamp: captureTime,
-                    location,
-                    image: frame,
-                };
-                socket.send(JSON.stringify(message));
-                console.log('Frame sent:', message);
-            } catch (error) {
-                console.error('Error sending frame:', error);
-            }
-        }, 5000);
+        try {
+          const location = await getLocation();
+          const message = {
+            eventType: 'bad weather',
+            timestamp: captureTime,
+            location,
+            image: frame,
+            token: token
+        };
+          socket.send(JSON.stringify(message));
+          console.log('Frame sent:', message);
+        } catch (error) {
+          console.error('Error sending frame:', error);
+        }
+      }, 5000);
     })
     .catch((error) => {
-        console.error('Error accessing the camera:', error);
+      console.error('Error accessing the camera:', error);
     });
-</script>
+  </script>
 </body>
 </html>

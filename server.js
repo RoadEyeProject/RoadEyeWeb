@@ -1,5 +1,5 @@
-// server.js
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
@@ -53,11 +53,11 @@ async function startServer() {
             }
         });
 
-        passport.use(new LocalStrategy(async (username, password, done) => {
+        passport.use(new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
             try {
-                const user = await User.findOne({ username });
-                if (!user) return done(null, false, { message: 'Incorrect username.' });
-
+                const user = await User.findOne({ email });
+                if (!user) return done(null, false, { message: 'Incorrect email.' });
+        
                 const isMatch = await bcrypt.compare(password, user.password);
                 return done(null, isMatch ? user : false);
             } catch (err) {
@@ -83,21 +83,53 @@ async function startServer() {
         }));
 
         app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
-        app.post('/login', passport.authenticate('local', {
-            successRedirect: '/camera.html',
-            failureRedirect: '/'
-        }));
+
+        app.post('/login', async (req, res, next) => {
+            passport.authenticate('local', async (err, user, info) => {
+                if (err) return next(err);
+                if (!user) return res.redirect('/'); 
+        
+                const token = jwt.sign({
+                    id: user.id,
+                }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        
+                res.cookie('token', token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'strict',
+                    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+                });
+        
+                res.redirect('/camera.html');
+            })(req, res, next);
+        });
+        
+
         app.get('/signup', (req, res) => res.sendFile(path.join(__dirname, 'public', 'signup.html')));
+        
+
+        function isPasswordStrong(password) {
+            const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+            return passwordRegex.test(password);
+        }
         app.post('/signup', async (req, res) => {
-            const { username, password } = req.body;
+            const { firstName, lastName, email, password } = req.body;
+        
+            if (!isPasswordStrong(password)) {
+                console.log('Password too weak');
+                return res.redirect('/signup');
+            }
+        
             try {
                 const hash = await bcrypt.hash(password, 10);
-                await User.create({ username, password: hash });
+                await User.create({ firstName, lastName, email, password: hash });
                 res.redirect('/');
             } catch (err) {
+                console.error(err);
                 res.redirect('/signup');
             }
         });
+
         app.get('/camera.html', isAuthenticated, (req, res) => {
             res.sendFile(path.join(__dirname, 'protected', 'camera.html'));
         });
@@ -122,22 +154,35 @@ async function startServer() {
 
         wss.on('connection', (ws) => {
             console.log('New WebSocket client connected');
-
+        
             ws.on('message', async (data) => {
                 const message = JSON.parse(data);
-                if (message.image) {
-                    const base64Data = message.image.replace(/^data:image\/(png|jpeg);base64,/, '');
-                    const buffer = Buffer.from(base64Data, 'base64');
-                    const filename = `image_${message.timestamp}.jpg`;
-
-                    // fs.writeFileSync(path.join(imagesDir, filename), buffer);
-                    console.log(`Received image as ${filename}`);
+        
+                try {
+                    const decoded = jwt.verify(message.token, process.env.JWT_SECRET); 
+        
+                    const newMessage = {
+                        eventType: message.eventType,
+                        timestamp: message.timestamp,
+                        location: message.location,
+                        image: message.image,
+                        userId: decoded.id,
+                        email: decoded.email,
+                        firstName: decoded.firstName,
+                        lastName: decoded.lastName
+                    };
+        
+                    await client.rPush('image_queue', JSON.stringify(newMessage));
+        
+                    console.log(`Saved message from user: ${decoded.email}`);
+                } catch (err) {
+                    console.error('Invalid JWT token:', err);
+                    ws.close(4001, 'Unauthorized');
                 }
-                await client.rPush('image_queue', JSON.stringify(message));
             });
-
+        
             ws.on('close', () => console.log('WebSocket client disconnected'));
-        });
+        });        
     } catch (err) {
         console.error('Startup error:', err);
         process.exit(1);
