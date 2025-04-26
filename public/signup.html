@@ -39,17 +39,7 @@
       background-color: #333;
       color: #fff;
     }
-    .toggle-password {
-      position: absolute;
-      top: 50%;
-      right: 10px;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #bbb;
-      font-size: 16px;
-    }
+
     .password-hint {
       color: #aaa;
       font-size: 12px;
@@ -142,11 +132,11 @@
       return passwordRegex.test(password);
     }
 
-    togglePassword.addEventListener('click', () => {
-      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-      passwordInput.setAttribute('type', type);
-      togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
-    });
+    //togglePassword.addEventListener('click', () => {
+    //  const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+     // passwordInput.setAttribute('type', type);
+     // togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    //});
 
     passwordInput.addEventListener('input', () => {
       if (isPasswordStrong(passwordInput.value)) {
