@@ -24,14 +24,7 @@ client.on("error", function(err) {
 client.connect()
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }).then(() => {
-    console.log('Connected to MongoDB');
-  }).catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
-  });
+mongoose.connect(process.env.MONGO_URI)
 
 app.use(express.static(path.join(__dirname, 'public'), {
     index: false,
@@ -136,7 +129,7 @@ wss.on('connection', (ws) => {
             //fs.writeFileSync(path.join(imagesDir, filename), buffer); 
             //until we have seperate dev environmets, we will not save images localy to save space
             //we a re using free services we cannot clutter it
-            
+
             console.log(`Saved image as ${filename}`);
         }
         await client.rPush('image_queue', JSON.stringify(message));
