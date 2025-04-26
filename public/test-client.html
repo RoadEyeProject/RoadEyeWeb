@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test Page</h1>
+    <button onclick="sendMessage()">Send Hello</button>
+    <div id="log"></div>
+
+    <script>
+        const socket = new WebSocket('wss://roadeye.onrender.com/ws'); // <--- your Render URL
+
+        socket.onopen = () => {
+            log('✅ WebSocket connected');
+        };
+
+        socket.onmessage = (event) => {
+            log('📩 Message from server: ' + event.data);
+        };
+
+        socket.onerror = (error) => {
+            log('❌ WebSocket error:', error);
+        };
+
+        socket.onclose = () => {
+            log('❌ WebSocket closed');
+        };
+
+        function sendMessage() {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send('Hello Server!');
+                log('📤 Sent: Hello Server!');
+            } else {
+                log('⚠️ WebSocket not open');
+            }
+        }
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const p = document.createElement('p');
+            p.textContent = message;
+            logDiv.appendChild(p);
+        }
+    </script>
+</body>
+</html>
