@@ -53,17 +53,23 @@ async function startServer() {
             }
         });
 
-        passport.use(new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
-            try {
-                const user = await User.findOne({ email });
+        passport.use(new LocalStrategy(
+            { usernameField: 'email' }, // Tell Passport to expect 'email' instead of 'username'
+            async (email, password, done) => {
+              try {
+                const user = await User.findOne({ email }); // Search by email
                 if (!user) return done(null, false, { message: 'Incorrect email.' });
-        
+          
                 const isMatch = await bcrypt.compare(password, user.password);
-                return done(null, isMatch ? user : false);
-            } catch (err) {
+                if (!isMatch) return done(null, false, { message: 'Incorrect password.' });
+          
+                return done(null, user); // Authentication successful
+              } catch (err) {
                 return done(err);
+              }
             }
-        }));
+          ));
+          
 
         passport.use(new GoogleStrategy({
             clientID: process.env.GOOGLE_CLIENT_ID,
