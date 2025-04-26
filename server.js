@@ -72,22 +72,22 @@ async function startServer() {
           ));
           
 
-        passport.use(new GoogleStrategy({
-            clientID: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: process.env.GOOGLE_CALLBACK_URL
-        }, async (accessToken, refreshToken, profile, done) => {
-            const username = profile.emails[0].value;
-            try {
-                let user = await User.findOne({ username });
-                if (!user) {
-                    user = await User.create({ username, password: 'google-oauth' });
-                }
-                done(null, user);
-            } catch (err) {
-                done(err);
-            }
-        }));
+        // passport.use(new GoogleStrategy({
+        //     clientID: process.env.GOOGLE_CLIENT_ID,
+        //     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        //     callbackURL: process.env.GOOGLE_CALLBACK_URL
+        // }, async (accessToken, refreshToken, profile, done) => {
+        //     const username = profile.emails[0].value;
+        //     try {
+        //         let user = await User.findOne({ username });
+        //         if (!user) {
+        //             user = await User.create({ username, password: 'google-oauth' });
+        //         }
+        //         done(null, user);
+        //     } catch (err) {
+        //         done(err);
+        //     }
+        // }));
 
         app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
