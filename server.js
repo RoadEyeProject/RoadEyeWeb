@@ -15,8 +15,13 @@ const User = require('./models/User');
 const app = express();
 const port = 3000;
 const imagesDir = path.join(__dirname, 'images');
-const client = redis.createClient();
-client.connect();
+const client = redis.createClient ({
+    url : process.env.UPSTASH_REDIS_URL
+  });
+client.on("error", function(err) {
+    throw err;
+});
+client.connect()
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
