@@ -132,7 +132,11 @@ wss.on('connection', (ws) => {
             const base64Data = message.image.replace(/^data:image\/(png|jpeg);base64,/, '');
             const buffer = Buffer.from(base64Data, 'base64');
             const filename = `image_${message.timestamp}.jpg`;
-            fs.writeFileSync(path.join(imagesDir, filename), buffer);
+
+            //fs.writeFileSync(path.join(imagesDir, filename), buffer); 
+            //until we have seperate dev environmets, we will not save images localy to save space
+            //we a re using free services we cannot clutter it
+            
             console.log(`Saved image as ${filename}`);
         }
         await client.rPush('image_queue', JSON.stringify(message));
