@@ -114,7 +114,19 @@ const server = app.listen(port, '0.0.0.0', () => {
     console.log(`Server running at http://0.0.0.0:${port}`);
 });
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', (request, socket, head) => {
+    const { url } = request;
+    if (url === '/ws') {  // Only upgrade WebSocket requests made to /ws
+        wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.emit('connection', ws, request);
+        });
+    } else {
+        socket.destroy();
+    }
+});
+
 
 wss.on('connection', (ws) => {
     console.log('New WebSocket client connected');
