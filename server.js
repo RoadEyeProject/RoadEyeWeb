@@ -155,42 +155,35 @@ async function startServer() {
         const wss = new WebSocketServer({ noServer: true });
 
         server.on('upgrade', (request, socket, head) => {
+            const url = new URL(request.url, `http://${request.headers.host}`);
+            const token = url.searchParams.get("token");
+        
+            request.token = token; // attach it to request for later
             wss.handleUpgrade(request, socket, head, (ws) => {
-                wss.emit('connection', ws, request);
+                wss.emit('connection', ws, request); // pass request to connection
             });
         });
 
-        wss.on('connection', (ws) => {
-            console.log('New WebSocket client connected');
+        wss.on('connection', (ws, request) => {
+            const token = request.token;
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
             ws.on('message', async (data) => {
+                try{
                 const message = JSON.parse(data);
-        
-                try {
-                    const decoded = jwt.verify(message.token, process.env.JWT_SECRET); 
-        
-                    const newMessage = {
-                        eventType: message.eventType,
-                        timestamp: message.timestamp,
-                        location: message.location,
-                        image: message.image,
-                        userId: decoded.id,
-                        email: decoded.email,
-                        firstName: decoded.firstName,
-                        lastName: decoded.lastName
-                    };
-        
-                    await client.rPush('image_queue', JSON.stringify(newMessage));
-        
-                    console.log(`Saved message from user: ${decoded.email}`);
-                } catch (err) {
-                    console.error('Invalid JWT token:', err);
-                    ws.close(4001, 'Unauthorized');
-                }
+                console.log("Received message:", message);
+                const enrichedMessage = {
+                    ...message,
+                    userId: decoded.id,
+                };
+                console.log("Pushing to Redis:", message);
+                await client.rPush('image_queue', JSON.stringify(enrichedMessage));
+            }
+            catch (err) {
+                console.error("WS Message error:", err);
+            }
             });
-        
-            ws.on('close', () => console.log('WebSocket client disconnected'));
-        });        
+        });       
     } catch (err) {
         console.error('Startup error:', err);
         process.exit(1);
