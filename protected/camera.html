@@ -68,7 +68,7 @@
     const videoElement = document.getElementById('video');
     const token = getCookie('token');
     const socket = new WebSocket(`wss://${window.location.host}?token=${token}`);
-    
+    console.log(socket)
     socket.onopen = () => console.log('WebSocket connection opened');
     socket.onmessage = (message) => console.log('Server says:', message.data);
     socket.onerror = (error) => console.error('WebSocket error:', error);
@@ -115,7 +115,7 @@
         try {
           const location = await getLocation();
           const message = {
-            eventType: 'bad weather',
+            eventType: 'police car',
             timestamp: captureTime,
             location,
             image: frame,
