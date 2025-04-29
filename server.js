@@ -33,16 +33,13 @@ async function startServer() {
         app.use(express.static(path.join(__dirname, 'public'), {
             index: false,
             extensions: ['html', 'htm'],
-            setHeaders: (res, filePath) => {
-                if (path.basename(filePath) === 'camera.html') {
-                    res.status(403).end('Access denied');
-                }
-            }
+            setHeaders: (res, filePath) => {}
         }));
         app.use(express.urlencoded({ extended: false }));
         app.use(session({ secret: 'yourSecretKey', resave: false, saveUninitialized: true }));
         app.use(passport.initialize());
         app.use(passport.session());
+        app.use('/protected', express.static(path.join(__dirname, 'protected')));
 
         passport.serializeUser((user, done) => done(null, user.id));
         passport.deserializeUser(async (id, done) => {
@@ -98,7 +95,10 @@ async function startServer() {
 
                 const token = jwt.sign({
                     id: user.id,
-                }, process.env.JWT_SECRET, { expiresIn: '7d' });
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName
+                  }, process.env.JWT_SECRET, { expiresIn: '7d' });
         
                 res.cookie('token', token, {
                     httpOnly: true,
