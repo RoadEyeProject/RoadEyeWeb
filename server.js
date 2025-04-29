@@ -12,7 +12,8 @@ const { WebSocketServer } = require('ws');
 const redis = require('redis');
 const mongoose = require('mongoose');
 const User = require('./models/User');
-
+const cookieParser = require('cookie-parser');
+app.use(cookieParser());
 const app = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
@@ -137,7 +138,7 @@ async function startServer() {
             }
         });
 
-        app.get('/camera.html', isAuthenticated, (req, res) => {
+        app.get('/camera.html', isTokenAuthenticated, (req, res) => {
             res.sendFile(path.join(__dirname, 'protected', 'camera.html'));
         });
 
@@ -196,9 +197,20 @@ async function startServer() {
     }
 }
 
-function isAuthenticated(req, res, next) {
-    if (req.isAuthenticated()) return next();
-    res.redirect('/');
+function isTokenAuthenticated(req, res, next) {
+    const token = req.cookies.token;
+    if (!token) {
+        return res.redirect('/');
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded; // Save user info if you want
+        next();
+    } catch (err) {
+        console.error('Invalid token:', err);
+        res.redirect('/');
+    }
 }
 
 startServer();
