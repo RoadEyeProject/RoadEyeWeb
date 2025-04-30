@@ -1,4 +1,6 @@
 require('dotenv').config();
+const { parse } = require('url');
+const querystring = require('querystring');
 const jwt = require('jsonwebtoken');
 const express = require('express');
 const session = require('express-session');
@@ -92,22 +94,32 @@ async function startServer() {
         app.post('/login', async (req, res, next) => {
             passport.authenticate('local', async (err, user, info) => {
                 if (err) return next(err);
-                if (!user) return res.redirect('/'); 
-
+                if (!user) return res.redirect('/');
+        
+                // ✅ Create JWT
                 const token = jwt.sign({
                     id: user.id,
                     email: user.email,
                     firstName: user.firstName,
                     lastName: user.lastName
-                  }, process.env.JWT_SECRET, { expiresIn: '7d' });
+                }, process.env.JWT_SECRET, { expiresIn: '7d' });
         
+                // ✅ Set both cookies: secure for server, readable for frontend
                 res.cookie('token', token, {
                     httpOnly: true,
                     secure: true,
                     sameSite: 'strict',
-                    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+                    maxAge: 7 * 24 * 60 * 60 * 1000
                 });
-
+        
+                res.cookie('access_token', token, {
+                    httpOnly: false,  // JavaScript can read this
+                    secure: true,
+                    sameSite: 'strict',
+                    maxAge: 7 * 24 * 60 * 60 * 1000
+                });
+        
+                // ✅ Redirect to protected page
                 res.redirect('/camera.html');
             })(req, res, next);
         });
@@ -154,36 +166,47 @@ async function startServer() {
 
         const wss = new WebSocketServer({ noServer: true });
 
-        server.on('upgrade', (request, socket, head) => {
-            const url = new URL(request.url, `http://${request.headers.host}`);
-            const token = url.searchParams.get("token");
+        server.on('upgrade', (req, socket, head) => {
+            const { query } = parse(req.url);
+            const { token } = querystring.parse(query);
         
-            request.token = token; // attach it to request for later
-            wss.handleUpgrade(request, socket, head, (ws) => {
-                wss.emit('connection', ws, request); // pass request to connection
+            if (!token) {
+                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                socket.destroy();
+                return;
+            }
+        
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                req.user = decoded; // attach the user info to the request
+            } catch (err) {
+                console.error('JWT verification failed:', err);
+                socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+                socket.destroy();
+                return;
+            }
+        
+            wss.handleUpgrade(req, socket, head, (ws) => {
+                wss.emit('connection', ws, req);
             });
         });
 
-        wss.on('connection', (ws, request) => {
-            const token = request.token;
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        wss.on('connection', (ws, req) => {
+            console.log('WebSocket client connected')
+            const user = req.user;
         
             ws.on('message', async (data) => {
-                try{
                 const message = JSON.parse(data);
-                console.log("Received message:", message);
                 const enrichedMessage = {
                     ...message,
-                    userId: decoded.id,
+                    userId: user.id,
                 };
-                console.log("Pushing to Redis:", message);
                 await client.rPush('image_queue', JSON.stringify(enrichedMessage));
-            }
-            catch (err) {
-                console.error("WS Message error:", err);
-            }
+                console.log('Pushed to Redis:', enrichedMessage);
             });
-        });       
+        
+            ws.on('close', () => console.log('WebSocket client disconnected'));
+        });
     } catch (err) {
         console.error('Startup error:', err);
         process.exit(1);
