@@ -135,10 +135,10 @@ async function startServer() {
         app.post('/signup', async (req, res) => {
             const { firstName, lastName, email, password } = req.body;
         
-            if (!isPasswordStrong(password)) {
-                console.log('Password too weak');
-                return res.redirect('/signup');
-            }
+            //if (!isPasswordStrong(password)) {
+                //console.log('Password too weak');
+                //return res.redirect('/signup');
+            //}
         
             try {
                 const hash = await bcrypt.hash(password, 10);

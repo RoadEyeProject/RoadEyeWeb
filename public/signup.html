@@ -151,11 +151,11 @@
     });
 
     signupForm.addEventListener('submit', (e) => {
-      if (!isPasswordStrong(passwordInput.value)) {
-        e.preventDefault();
-        alert('Please enter a stronger password.');
-        return;
-      }
+      //if (!isPasswordStrong(passwordInput.value)) {
+       // e.preventDefault();
+        //alert('Please enter a stronger password.');
+        //return;
+     // }
       signupButton.disabled = true;
       signupText.style.display = 'none';
       spinner.style.display = 'block';
