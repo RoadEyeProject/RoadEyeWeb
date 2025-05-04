@@ -12,33 +12,26 @@ const { WebSocketServer } = require('ws');
 const redis = require('redis');
 const mongoose = require('mongoose');
 const User = require('./models/User');
-const helmet = require('helmet');
-const cors = require('cors');
 
 const app = express();
 app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 
-// Redis setup
 const client = redis.createClient({
     url: process.env.UPSTASH_REDIS_URL
 });
 
 // Middleware
-app.use(helmet());
-app.use(cors());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(passport.initialize());
-
-// Static files
 app.use(express.static(path.join(__dirname, 'public'), {
     index: false,
     extensions: ['html', 'htm']
 }));
 app.use('/protected', express.static(path.join(__dirname, 'protected')));
 
-// Passport Local Strategy
+// Passport Local Strategy only
 passport.use(new LocalStrategy({ usernameField: 'email' }, async (email, password, done) => {
     try {
         const user = await User.findOne({ email });
@@ -57,7 +50,7 @@ passport.use(new LocalStrategy({ usernameField: 'email' }, async (email, passwor
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 
 app.post('/login', (req, res, next) => {
-    passport.authenticate('local', async (err, user, info) => {
+    passport.authenticate('local', async (err, user) => {
         if (err) return next(err);
         if (!user) return res.redirect('/');
 
@@ -68,7 +61,6 @@ app.post('/login', (req, res, next) => {
             lastName: user.lastName
         }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-        // Set cookies
         res.cookie('token', token, {
             httpOnly: true,
             secure: true,
@@ -106,7 +98,6 @@ app.get('/camera.html', isTokenAuthenticated, (req, res) => {
     res.sendFile(path.join(__dirname, 'protected', 'camera.html'));
 });
 
-// JWT-based authentication middleware
 function isTokenAuthenticated(req, res, next) {
     const token = req.cookies.token;
     if (!token) return res.redirect('/');
@@ -121,17 +112,17 @@ function isTokenAuthenticated(req, res, next) {
     }
 }
 
-// Start everything
+// WebSocket & server setup
 async function startServer() {
     try {
         await client.connect();
-        console.log('Connected to Redis');
+        console.log('✅ Connected to Redis');
 
         await mongoose.connect(process.env.MONGO_URI);
-        console.log('Connected to MongoDB');
+        console.log('✅ Connected to MongoDB');
 
         const server = app.listen(port, '0.0.0.0', () => {
-            console.log(`Server running at http://0.0.0.0:${port}`);
+            console.log(`🚀 Server running at http://0.0.0.0:${port}`);
         });
 
         const wss = new WebSocketServer({ noServer: true });
@@ -167,7 +158,10 @@ async function startServer() {
 
             ws.on('message', async (data) => {
                 const message = JSON.parse(data);
-                const enrichedMessage = { ...message, userId: user.id };
+                const enrichedMessage = {
+                    ...message,
+                    userId: user.id
+                };
                 await client.rPush('image_queue', JSON.stringify(enrichedMessage));
                 console.log('Pushed to Redis:', enrichedMessage);
             });
@@ -176,7 +170,7 @@ async function startServer() {
         });
 
     } catch (err) {
-        console.error('Startup error:', err);
+        console.error('❌ Startup error:', err);
         process.exit(1);
     }
 }
