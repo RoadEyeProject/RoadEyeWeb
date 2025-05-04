@@ -40,8 +40,8 @@ async function startServer() {
         }));
         app.use(express.urlencoded({ extended: false }));
         app.use(session({ secret: 'yourSecretKey', resave: false, saveUninitialized: true }));
-        app.use(passport.initialize());
-        app.use(passport.session());
+        //app.use(passport.initialize());
+        //app.use(passport.session());
         app.use('/protected', express.static(path.join(__dirname, 'protected')));
 
         passport.serializeUser((user, done) => done(null, user.id));
@@ -54,22 +54,22 @@ async function startServer() {
             }
         });
 
-        passport.use(new LocalStrategy(
-            { usernameField: 'email' }, // Tell Passport to expect 'email' instead of 'username'
-            async (email, password, done) => {
-              try {
-                const user = await User.findOne({ email }); // Search by email
-                if (!user) return done(null, false, { message: 'Incorrect email.' });
+        //passport.use(new LocalStrategy(
+           // { usernameField: 'email' }, // Tell Passport to expect 'email' instead of 'username'
+           // async (email, password, done) => {
+            //  try {
+             //   const user = await User.findOne({ email }); // Search by email
+             //   if (!user) return done(null, false, { message: 'Incorrect email.' });
           
-                const isMatch = await bcrypt.compare(password, user.password);
-                if (!isMatch) return done(null, false, { message: 'Incorrect password.' });
+             //   const isMatch = await bcrypt.compare(password, user.password);
+             //   if (!isMatch) return done(null, false, { message: 'Incorrect password.' });
           
-                return done(null, user); // Authentication successful
-              } catch (err) {
-                return done(err);
-              }
-            }
-          ));
+            //    return done(null, user); // Authentication successful
+            //  } catch (err) {
+            //    return done(err);
+            //  }
+           // }
+         // ));
           
 
         // passport.use(new GoogleStrategy({

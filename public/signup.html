@@ -138,17 +138,17 @@
      // togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
     //});
 
-    passwordInput.addEventListener('input', () => {
-      if (isPasswordStrong(passwordInput.value)) {
-        passwordHint.classList.remove('password-invalid');
-        passwordHint.classList.add('password-valid');
-        passwordHint.textContent = 'Strong password!';
-      } else {
-        passwordHint.classList.remove('password-valid');
-        passwordHint.classList.add('password-invalid');
-        passwordHint.textContent = 'Password must be at least 8 characters, with letters, numbers and special characters.';
-      }
-    });
+    //passwordInput.addEventListener('input', () => {
+    //  if (isPasswordStrong(passwordInput.value)) {
+     //   passwordHint.classList.remove('password-invalid');
+      //  passwordHint.classList.add('password-valid');
+      //  passwordHint.textContent = 'Strong password!';
+    //  } else {
+     //   passwordHint.classList.remove('password-valid');
+     //   passwordHint.classList.add('password-invalid');
+      //  passwordHint.textContent = 'Password must be at least 8 characters, with letters, numbers and special characters.';
+   //   }
+   // });
 
     signupForm.addEventListener('submit', (e) => {
       //if (!isPasswordStrong(passwordInput.value)) {
