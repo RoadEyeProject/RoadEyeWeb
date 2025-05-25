@@ -18,7 +18,7 @@ app.set('trust proxy', 1);
 const port = process.env.PORT || 3000;
 
 const client = redis.createClient({
-    url: process.env.UPSTASH_REDIS_URL
+    url: process.env.REDIS_URL
 });
 
 // Middleware
