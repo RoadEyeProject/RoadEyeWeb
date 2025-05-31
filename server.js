@@ -153,40 +153,32 @@ async function startServer() {
         });
 
         wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
+            console.log('WebSocket client connected');
 
-    ws.on('message', async (data) => {
-        try {
-            const message = JSON.parse(data);
+            ws.on('message', async (data) => {
+                const message = JSON.parse(data);
 
-            if (!message.token) {
-                console.error('No token in message, skipping.');
-                return;
-            }
+                try {
+                    const decoded = jwt.verify(message.token, process.env.JWT_SECRET);
 
-            const decoded = jwt.verify(message.token, process.env.JWT_SECRET);
+                    const enrichedMessage = {
+                        eventType: message.eventType,
+                        timestamp: message.timestamp,
+                        location: message.location,
+                        image: message.image,
+                        userId: decoded.id
+                    };
 
-            const enrichedMessage = {
-                eventType: message.eventType,
-                timestamp: message.timestamp,
-                location: message.location,
-                image: message.image,
-                userId: decoded.id,
-                email: decoded.email,
-                firstName: decoded.firstName,
-                lastName: decoded.lastName
-            };
+                    await client.rPush('image_queue', JSON.stringify(enrichedMessage));
+                    console.log(`✅ Pushed message from user ${decoded.id}`);
+                } catch (err) {
+                    console.error('❌ Invalid token:', err);
+                    ws.close(4001, 'Unauthorized');
+                }
+            });
 
-            await client.rPush('image_queue', JSON.stringify(enrichedMessage));
-            console.log(`📥 Received image from ${decoded.email}`);
-
-        } catch (err) {
-            console.error('❌ Error processing WebSocket message:', err.message);
-        }
-    });
-
-    ws.on('close', () => console.log('WebSocket client disconnected'));
-});
+            ws.on('close', () => console.log('WebSocket client disconnected'));
+        });
 
 
     } catch (err) {
