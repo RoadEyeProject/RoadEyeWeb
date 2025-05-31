@@ -2,6 +2,8 @@ const { parse } = require('url');
 const querystring = require('querystring');
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redisClient');
+const User = require('../models/User');
+const { normalizeEventType } = require('../utils/eventNormalizer');
 
 function setupWebSocket(wss, req, socket, head) {
   const { query } = parse(req.url);
@@ -33,11 +35,20 @@ function setupWebSocket(wss, req, socket, head) {
     console.log('✅ WebSocket client connected:', user.firstName);
 
     ws.on('message', async (data) => {
+      const message = JSON.parse(data);
       try {
-        const message = JSON.parse(data);
+        const eventType = normalizeEventType(message.eventType);
+        if (!eventType) {
+          console.warn("Unknown event type:", message.eventType);
+          return;
+        }
         const enrichedMessage = { ...message, userId: user.id };
         await redisClient.rPush('image_queue', JSON.stringify(enrichedMessage));
         console.log(`📨 Pushed message from ${user.firstName}`);
+        // Updating mongodb user event count
+        await User.findByIdAndUpdate(user.id, {
+          $inc: { [`reportCounts.${eventType}`]: 1 }
+        });
       } catch (err) {
         console.error('❌ Failed to process message:', err);
         ws.close(4001, 'Invalid message');
