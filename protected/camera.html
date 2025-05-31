@@ -122,9 +122,7 @@
             token: token
         };
           socket.send(JSON.stringify(message));
-          console.log('Frame sent:', message);
         } catch (error) {
-          console.error('Error sending frame:', error);
         }
       }, 1000);
     })
