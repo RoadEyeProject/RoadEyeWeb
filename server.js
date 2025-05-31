@@ -153,24 +153,23 @@ async function startServer() {
         });
 
         wss.on('connection', (ws) => {
-            console.log('WebSocket client connected');
-
+            const user = req.user;
+            console.log('WebSocket client connected, user: ', user.firstName);
+            
             ws.on('message', async (data) => {
                 const message = JSON.parse(data);
 
                 try {
-                    const decoded = jwt.verify(message.token, process.env.JWT_SECRET);
-
                     const enrichedMessage = {
                         eventType: message.eventType,
                         timestamp: message.timestamp,
                         location: message.location,
                         image: message.image,
-                        userId: decoded.id
+                        userId: user.id
                     };
 
                     await client.rPush('image_queue', JSON.stringify(enrichedMessage));
-                    console.log(`✅ Pushed message from user ${decoded.id}`);
+                    console.log(`✅ Pushed message from user ${user.id}`);
                 } catch (err) {
                     console.error('❌ Invalid token:', err);
                     ws.close(4001, 'Unauthorized');
