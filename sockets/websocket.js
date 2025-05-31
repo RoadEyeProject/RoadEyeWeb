@@ -45,10 +45,6 @@ function setupWebSocket(wss, req, socket, head) {
         const enrichedMessage = { ...message, userId: user.id };
         await redisClient.rPush('image_queue', JSON.stringify(enrichedMessage));
         console.log(`📨 Pushed message from ${user.firstName}`);
-        // Updating mongodb user event count
-        await User.findByIdAndUpdate(user.id, {
-          $inc: { [`reportCounts.${eventType}`]: 1 }
-        });
       } catch (err) {
         console.error('❌ Failed to process message:', err);
         ws.close(4001, 'Invalid message');
