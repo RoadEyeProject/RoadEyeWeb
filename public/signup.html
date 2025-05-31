@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -15,19 +16,22 @@
       height: 100vh;
       margin: 0;
     }
+
     form {
       background-color: #222;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
       width: 320px;
       text-align: center;
       position: relative;
     }
+
     .input-wrapper {
       position: relative;
       width: 100%;
     }
+
     input {
       padding: 10px;
       width: 100%;
@@ -45,12 +49,15 @@
       font-size: 12px;
       margin-top: 5px;
     }
+
     .password-valid {
       color: #4CAF50;
     }
+
     .password-invalid {
       color: #f44336;
     }
+
     button {
       padding: 10px;
       width: 100%;
@@ -63,6 +70,7 @@
       color: white;
       position: relative;
     }
+
     .spinner {
       display: none;
       margin: auto;
@@ -73,16 +81,24 @@
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
+
     @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
     }
+
     hr {
       margin: 20px 0;
       border: 0;
       height: 1px;
       background-color: #333;
     }
+
     a {
       text-decoration: none;
       color: #aaa;
@@ -90,6 +106,7 @@
     }
   </style>
 </head>
+
 <body>
 
   <form id="signupForm" action="/signup" method="post">
@@ -134,28 +151,28 @@
 
     //togglePassword.addEventListener('click', () => {
     //  const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-     // passwordInput.setAttribute('type', type);
-     // togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+    // passwordInput.setAttribute('type', type);
+    // togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
     //});
 
     //passwordInput.addEventListener('input', () => {
     //  if (isPasswordStrong(passwordInput.value)) {
-     //   passwordHint.classList.remove('password-invalid');
-      //  passwordHint.classList.add('password-valid');
-      //  passwordHint.textContent = 'Strong password!';
+    //   passwordHint.classList.remove('password-invalid');
+    //  passwordHint.classList.add('password-valid');
+    //  passwordHint.textContent = 'Strong password!';
     //  } else {
-     //   passwordHint.classList.remove('password-valid');
-     //   passwordHint.classList.add('password-invalid');
-      //  passwordHint.textContent = 'Password must be at least 8 characters, with letters, numbers and special characters.';
-   //   }
-   // });
+    //   passwordHint.classList.remove('password-valid');
+    //   passwordHint.classList.add('password-invalid');
+    //  passwordHint.textContent = 'Password must be at least 8 characters, with letters, numbers and special characters.';
+    //   }
+    // });
 
     signupForm.addEventListener('submit', (e) => {
       //if (!isPasswordStrong(passwordInput.value)) {
-       // e.preventDefault();
-        //alert('Please enter a stronger password.');
-        //return;
-     // }
+      // e.preventDefault();
+      //alert('Please enter a stronger password.');
+      //return;
+      // }
       signupButton.disabled = true;
       signupText.style.display = 'none';
       spinner.style.display = 'block';
@@ -163,4 +180,5 @@
   </script>
 
 </body>
+
 </html>

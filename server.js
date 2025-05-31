@@ -152,10 +152,10 @@ async function startServer() {
             });
         });
 
-        wss.on('connection', (ws) => {
+        wss.on('connection', (ws, req) => {
             const user = req.user;
             console.log('WebSocket client connected, user: ', user.firstName);
-            
+
             ws.on('message', async (data) => {
                 const message = JSON.parse(data);
 
