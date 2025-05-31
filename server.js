@@ -163,7 +163,6 @@ async function startServer() {
                     userId: user.id
                 };
                 await client.rPush('image_queue', JSON.stringify(enrichedMessage));
-                console.log('Pushed to Redis:', enrichedMessage);
             });
 
             ws.on('close', () => console.log('WebSocket client disconnected'));
