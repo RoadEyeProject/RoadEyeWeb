@@ -169,7 +169,7 @@ async function startServer() {
                     };
 
                     await client.rPush('image_queue', JSON.stringify(enrichedMessage));
-                    console.log(`✅ Pushed message from user ${user.id}`);
+                    console.log(`✅ Pushed message from user ${user.firstName}`);
                 } catch (err) {
                     console.error('❌ Invalid token:', err);
                     ws.close(4001, 'Unauthorized');
