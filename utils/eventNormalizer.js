@@ -3,7 +3,7 @@ const normalizeEventType = (detectedClass) => {
         case "Arrow Board":
         case "Traffic Cones":
             return "Road Construction";
-        case "Police Car":
+        case "police car":
         case "Accident":
             return detectedClass;
         default:
