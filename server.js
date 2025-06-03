@@ -14,6 +14,7 @@ require('./config/passport'); // sets up passport strategies
 const authRoutes = require('./routes/auth');
 const protectedRoutes = require('./routes/protected');
 const setupWebSocket = require('./sockets/websocket');
+const reportRoutes = require('./routes/reports');
 
 const app = express();
 const server = createServer(app);
@@ -31,7 +32,8 @@ app.use('/protected', express.static(path.join(__dirname, 'protected')));
 // Routes
 app.use('/', authRoutes);
 app.use('/', protectedRoutes);
-
+// Api routes
+app.use('/api/reports', reportRoutes);
 // WebSocket upgrade
 server.on('upgrade', (req, socket, head) => {
   setupWebSocket(wss, req, socket, head);

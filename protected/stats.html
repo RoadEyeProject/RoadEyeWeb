@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RoadEye Stats</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      padding-bottom: 70px;
+      background: linear-gradient(135deg, #121212, #1a1a1a);
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(0, 123, 255, 0.2) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      filter: blur(60px);
+      z-index: 0;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 20px;
+      z-index: 1;
+    }
+
+    #stats {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 0 20px rgba(0, 123, 255, 0.4);
+      z-index: 1;
+      text-align: center;
+    }
+
+    #stats p {
+      font-size: 1.2rem;
+      margin: 10px 0;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #222;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      border-top: 1px solid #444;
+      z-index: 10;
+    }
+
+    .nav-item {
+      color: #fff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    .nav-item:hover {
+      color: #00aaff;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Your Report Statistics</h1>
+  <div id="stats">
+    <p>🚧 Road Construction: <span id="road-construction">0</span></p>
+    <p>🚔 Police Car: <span id="police-car">0</span></p>
+    <p>💥 Accident: <span id="accident">0</span></p>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="/camera.html" class="nav-item">📷 Camera</a>
+    <a href="/stats.html" class="nav-item">📊 Stats</a>
+  </nav>
+
+  <script>
+    async function fetchStats() {
+      try {
+        const response = await fetch('/api/reports');
+        const data = await response.json();
+
+        document.getElementById('road-construction').textContent = data['Road Construction'] || 0;
+        document.getElementById('police-car').textContent = data['Police Car'] || 0;
+        document.getElementById('accident').textContent = data['Accident'] || 0;
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    }
+
+    fetchStats();
+  </script>
+</body>
+
+</html>

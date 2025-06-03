@@ -9,6 +9,7 @@
     body {
       margin: 0;
       padding: 0;
+      padding-bottom: 70px;
       background: linear-gradient(135deg, #121212, #1a1a1a);
       color: #ffffff;
       font-family: Arial, sans-serif;
@@ -61,12 +62,41 @@
         box-shadow: 0 0 30px rgba(0, 123, 255, 0.8), 0 0 50px rgba(0, 123, 255, 0.4);
       }
     }
+
+    /* bottom nav bar */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #222;
+      display: flex;
+      justify-content: space-around;
+      padding: 12px 0;
+      border-top: 1px solid #444;
+      z-index: 10;
+    }
+
+    .nav-item {
+      color: #fff;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    .nav-item:hover {
+      color: #00aaff;
+    }
   </style>
 </head>
 
 <body>
   <h1>RoadEye Viewport</h1>
   <video id="video" autoplay playsinline muted></video>
+  <nav class="bottom-nav">
+    <a href="/camera.html" class="nav-item">📷 Camera</a>
+    <a href="/stats.html" class="nav-item">📊 Stats</a>
+  </nav>
 
   <script>
     const videoElement = document.getElementById('video');
