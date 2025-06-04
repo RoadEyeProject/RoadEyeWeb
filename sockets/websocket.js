@@ -2,7 +2,6 @@ const { parse } = require('url');
 const querystring = require('querystring');
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redisClient');
-const User = require('../models/User');
 const { normalizeEventType } = require('../utils/eventNormalizer');
 const userSockets = new Map(); // userId -> ws
 
@@ -19,7 +18,6 @@ function setupWebSocket(wss, req, socket, head) {
   let user;
   try {
     user = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = user;
   } catch (err) {
     console.error('JWT verification failed:', err);
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
@@ -27,17 +25,21 @@ function setupWebSocket(wss, req, socket, head) {
     return;
   }
 
+  // Complete WebSocket upgrade and emit a custom authenticated event
   wss.handleUpgrade(req, socket, head, (ws) => {
-    wss.emit('connection', ws, req);
+    wss.emit('authenticated-connection', ws, user);
   });
+}
 
-  wss.on('connection', (ws, req) => {
-    const user = req.user;
+// Attach this once in your server.js
+function registerConnectionHandler(wss) {
+  wss.on('authenticated-connection', (ws, user) => {
     console.log('✅ WebSocket client connected:', user.firstName);
+    userSockets.set(user.id, ws);
 
     ws.on('message', async (data) => {
-      const message = JSON.parse(data);
       try {
+        const message = JSON.parse(data);
         const eventType = normalizeEventType(message.eventType);
         if (!eventType) {
           console.warn("Unknown event type:", message.eventType);
@@ -52,13 +54,15 @@ function setupWebSocket(wss, req, socket, head) {
       }
     });
 
-    userSockets.set(user.id, ws);
-    
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
-      userSockets.delete(user.id); // cleanup on disconnect
+      userSockets.delete(user.id);
     });
   });
 }
 
-module.exports = { setupWebSocket, userSockets };
+module.exports = {
+  setupWebSocket,
+  registerConnectionHandler,
+  userSockets
+};

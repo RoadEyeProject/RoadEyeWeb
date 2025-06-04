@@ -13,7 +13,8 @@ require('./config/passport'); // sets up passport strategies
 
 const authRoutes = require('./routes/auth');
 const protectedRoutes = require('./routes/protected');
-const { setupWebSocket } = require('./sockets/websocket');
+const { setupWebSocket, registerConnectionHandler } = require('./sockets/websocket');
+
 const reportRoutes = require('./routes/reports');
 const setupRedisSubscriber = require('./redisSubscriber');
 
@@ -39,6 +40,7 @@ app.use('/api/reports', reportRoutes);
 server.on('upgrade', (req, socket, head) => {
   setupWebSocket(wss, req, socket, head);
 });
+registerConnectionHandler(wss);
 
 // Start services
 async function startServer() {
