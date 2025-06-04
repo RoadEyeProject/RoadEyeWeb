@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redisClient');
 const User = require('../models/User');
 const { normalizeEventType } = require('../utils/eventNormalizer');
+const userSockets = new Map(); // userId -> ws
 
 function setupWebSocket(wss, req, socket, head) {
   const { query } = parse(req.url);
@@ -51,10 +52,13 @@ function setupWebSocket(wss, req, socket, head) {
       }
     });
 
+    userSockets.set(user.id, ws);
+    
     ws.on('close', () => {
       console.log('WebSocket client disconnected');
+      userSockets.delete(user.id); // cleanup on disconnect
     });
   });
 }
 
-module.exports = setupWebSocket;
+module.exports = { setupWebSocket, userSockets };

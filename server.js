@@ -13,8 +13,9 @@ require('./config/passport'); // sets up passport strategies
 
 const authRoutes = require('./routes/auth');
 const protectedRoutes = require('./routes/protected');
-const setupWebSocket = require('./sockets/websocket');
+const { setupWebSocket } = require('./sockets/websocket');
 const reportRoutes = require('./routes/reports');
+const setupRedisSubscriber = require('./redisSubscriber');
 
 const app = express();
 const server = createServer(app);
@@ -44,6 +45,8 @@ async function startServer() {
   try {
     await redisClient.connect();
     console.log('✅ Connected to Redis');
+
+    await setupRedisSubscriber();
 
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB');
