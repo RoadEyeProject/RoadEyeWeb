@@ -41,10 +41,6 @@ function registerConnectionHandler(wss) {
       try {
         const message = JSON.parse(data);
         const eventType = normalizeEventType(message.eventType);
-        if (!eventType) {
-          console.warn("Unknown event type:", message.eventType);
-          return;
-        }
         const enrichedMessage = { ...message, userId: user.id };
         await redisClient.rPush('image_queue', JSON.stringify(enrichedMessage));
         console.log(`📨 Pushed message from ${user.firstName}`);

@@ -201,7 +201,6 @@
           try {
             const location = await getLocation();
             const message = {
-              eventType: 'police car',
               timestamp: Date.now(),
               location,
               image: frame,
@@ -211,7 +210,7 @@
           } catch (error) {
             console.warn('Location error:', error);
           }
-        }, 700);
+        }, 200);
       })
       .catch((error) => {
         console.error('Error accessing the camera:', error);
