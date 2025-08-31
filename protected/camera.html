@@ -136,86 +136,180 @@
   </nav>
 
   <script>
-    const videoElement = document.getElementById('video');
-    const token = getCookie('access_token');
-    const socket = new WebSocket(`wss://${window.location.host}?token=${token}`);
+  // ====== Tunables ======
+  const SEND_SIZE = 640;          // YOLO input size
+  const JPEG_QUALITY = 1.0;       // 0.0..1.0
+  const TARGET_FPS = 10;          // max frames/sec to send
+  const CAMERA_CONSTRAINTS = {
+    video: {
+      facingMode: { ideal: "environment" }, // better compatibility than exact
+      width:  { ideal: 1920 },              // ask high-ish; browser may give less
+      height: { ideal: 1080 }
+    },
+    audio: false
+  };
+  // =======================
 
-    socket.onopen = () => console.log('✅ WebSocket connection opened');
+  const videoElement = document.getElementById('video');
+  const token = getCookie('access_token');
+  const wsScheme = (location.protocol === 'https:') ? 'wss' : 'ws';
+  const socket = new WebSocket(`${wsScheme}://${window.location.host}?token=${encodeURIComponent(token || '')}`);
 
-    socket.onmessage = (message) => {
-      try {
-        const data = JSON.parse(message.data);
-        if (data.event && data.timestamp) {
-          showToast(`🚨 ${data.event} reported!`);
-        }
-      } catch (err) {
-        console.error('Error parsing WS message:', err);
+  // Geolocation cache (updated by watchPosition)
+  let lastLocation = null;
+  let lastLocationTime = 0;
+
+  socket.onopen = () => console.log('✅ WebSocket connection opened');
+
+  socket.onmessage = (message) => {
+    try {
+      const data = JSON.parse(message.data);
+      if (data.event && data.timestamp) {
+        showToast(`🚨 ${data.event} reported!`);
+      }
+    } catch (_) {
+      // Ignore non-JSON messages (e.g., binary frames from server)
+    }
+  };
+
+  socket.onerror = (error) => console.error('WebSocket error:', error);
+  socket.onclose = () => console.log('WebSocket connection closed');
+
+  function showToast(text) {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3500);
+  }
+
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  // Start geolocation watching (no per-frame geolocation calls)
+  if (navigator.geolocation) {
+    navigator.geolocation.watchPosition(
+      (pos) => {
+        lastLocation = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        };
+        lastLocationTime = Date.now();
+      },
+      (err) => {
+        console.warn('Geolocation watch error:', err.message);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 5000 }
+    );
+  } else {
+    console.warn('Geolocation not supported.');
+  }
+
+  // Prepare a dedicated 640x640 canvas for sending
+  const sendCanvas = document.createElement('canvas');
+  sendCanvas.width = SEND_SIZE;
+  sendCanvas.height = SEND_SIZE;
+  const sendCtx = sendCanvas.getContext('2d');
+
+  // Helper: draw full frame into a 640x640 with letterbox padding
+  function drawLetterboxed(video) {
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    if (!vw || !vh) return false;
+
+    const scale = Math.min(SEND_SIZE / vw, SEND_SIZE / vh);
+    const newW = Math.round(vw * scale);
+    const newH = Math.round(vh * scale);
+    const dx = Math.floor((SEND_SIZE - newW) / 2);
+    const dy = Math.floor((SEND_SIZE - newH) / 2);
+
+    // Fill background (black) for letterbox bars
+    sendCtx.fillStyle = 'black';
+    sendCtx.fillRect(0, 0, SEND_SIZE, SEND_SIZE);
+    sendCtx.drawImage(video, 0, 0, vw, vh, dx, dy, newW, newH);
+    return true;
+  }
+
+  // Throttle control
+  let lastSentAt = 0;
+  const frameIntervalMs = 1000 / TARGET_FPS;
+
+  function maybeSendFrame() {
+    if (document.hidden) return; // pause when tab not visible
+
+    const now = performance.now();
+    if (now - lastSentAt < frameIntervalMs) return;
+
+    const ok = drawLetterboxed(videoElement);
+    if (!ok) return;
+
+    // Encode to base64 to keep compatibility with your current server
+    // (If you later switch to binary: use sendCanvas.toBlob(blob => socket.send(blob), 'image/jpeg', JPEG_QUALITY))
+    const dataUrl = sendCanvas.toDataURL('image/jpeg', JPEG_QUALITY);
+
+    const message = {
+      type: 'frame',
+      timestamp: Date.now(),
+      image: dataUrl,          // base64 JPEG
+      token: token || null,
+      location: lastLocation,  // may be null if not granted yet
+      meta: {
+        sendSize: SEND_SIZE,
+        jpegQuality: JPEG_QUALITY
       }
     };
 
-    socket.onerror = (error) => console.error('WebSocket error:', error);
-    socket.onclose = () => console.log('WebSocket connection closed');
-
-    function showToast(text) {
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.textContent = text;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3500);
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(message));
+      lastSentAt = now;
     }
+  }
 
-    function getCookie(name) {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
+  // Drive the send loop using real video frames when available
+  function startPumpedSending() {
+    if ('requestVideoFrameCallback' in HTMLVideoElement.prototype) {
+      const step = () => {
+        maybeSendFrame();
+        videoElement.requestVideoFrameCallback(step);
+      };
+      videoElement.requestVideoFrameCallback(step);
+    } else {
+      setInterval(maybeSendFrame, frameIntervalMs);
     }
+  }
 
-    async function getLocation() {
-      return new Promise((resolve, reject) => {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            }),
-            (error) => reject(`Error getting location: ${error.message}`)
-          );
-        } else {
-          reject('Geolocation not supported.');
-        }
-      });
+  // Kick off camera
+  navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS)
+    .then((stream) => {
+      videoElement.srcObject = stream;
+
+      // Log actual camera settings for debugging
+      const track = stream.getVideoTracks()[0];
+      console.log('🎥 Camera settings:', track.getSettings());
+      videoElement.onloadedmetadata = () => {
+        console.log('🎥 Source resolution:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+      };
+
+      // Start send loop once metadata is ready
+      videoElement.addEventListener('loadeddata', () => startPumpedSending(), { once: true });
+    })
+    .catch((error) => {
+      console.error('Error accessing the camera:', error);
+      showToast('Camera access denied or unavailable');
+    });
+
+  // Optional: pause/resume sending when tab visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      lastSentAt = 0; // let next frame go out immediately on resume
     }
+  });
+</script>
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
-      .then((stream) => {
-        videoElement.srcObject = stream;
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-
-        setInterval(async () => {
-          canvas.width = videoElement.videoWidth;
-          canvas.height = videoElement.videoHeight;
-          context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-          const frame = canvas.toDataURL('image/jpeg');
-
-          try {
-            const location = await getLocation();
-            const message = {
-              timestamp: Date.now(),
-              location,
-              image: frame,
-              token: token
-            };
-            socket.send(JSON.stringify(message));
-          } catch (error) {
-            console.warn('Location error:', error);
-          }
-        }, 200);
-      })
-      .catch((error) => {
-        console.error('Error accessing the camera:', error);
-      });
-  </script>
 </body>
 
 </html>
