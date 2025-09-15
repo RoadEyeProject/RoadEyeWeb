@@ -1,0 +1,44 @@
+<!-- website/protected/viz.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RoadEye — Viz</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    html, body { margin:0; height:100%; background:#111; color:#eee; font-family:system-ui, Arial; }
+    .wrap { display:flex; align-items:center; justify-content:center; height:100%; }
+    img { max-width: 96vw; max-height: 92vh; object-fit: contain; background:#000; }
+    .bar { position:fixed; top:0; left:0; right:0; padding:8px 12px; background:#1e1e1e; font-size:14px; color:#bbb; }
+  </style>
+</head>
+<body>
+  <div class="bar">Model feed (read-only)</div>
+  <div class="wrap"><img id="feed" alt="model feed" /></div>
+
+  <script>
+    function getCookie(name) {
+      const v = `; ${document.cookie}`;
+      const p = v.split(`; ${name}=`);
+      if (p.length === 2) return p.pop().split(';').shift();
+    }
+    const token = getCookie('access_token') || '';
+    const wsScheme = (location.protocol === 'https:') ? 'wss' : 'ws';
+    const socket = new WebSocket(`${wsScheme}://${location.host}/viz?token=${encodeURIComponent(token)}`);
+    const img = document.getElementById('feed');
+
+    socket.onopen = () => console.log('✅ viz socket connected');
+    socket.onclose = () => console.log('❌ viz socket closed');
+    socket.onerror = (e) => console.error('viz socket error', e);
+
+    socket.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'viz_frame' && typeof msg.image === 'string') {
+          img.src = msg.image; // data URL
+        }
+      } catch { /* ignore */ }
+    };
+  </script>
+</body>
+</html>

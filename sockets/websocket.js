@@ -1,12 +1,16 @@
+// website/sockets/websocket.js
 const { parse } = require('url');
 const querystring = require('querystring');
 const jwt = require('jsonwebtoken');
 const redisClient = require('../config/redisClient');
 const { normalizeEventType } = require('../utils/eventNormalizer');
-const userSockets = new Map(); // userId -> ws
+
+const userSockets = new Map();  // userId -> ws (camera)
+const vizSockets  = new Set();  // viewers of viz feed
+const VIZ_EMAIL = 'eliran123345@gmail.com';
 
 function setupWebSocket(wss, req, socket, head) {
-  const { query } = parse(req.url);
+  const { pathname, query } = parse(req.url);
   const { token } = querystring.parse(query);
 
   if (!token) {
@@ -25,23 +29,42 @@ function setupWebSocket(wss, req, socket, head) {
     return;
   }
 
-  // Complete WebSocket upgrade and emit a custom authenticated event
+  // Upgrade and attach pathname + user
   wss.handleUpgrade(req, socket, head, (ws) => {
+    ws._pathname = pathname || '/';
+    ws._user = user;
     wss.emit('authenticated-connection', ws, user);
   });
 }
 
-// Attach this once in your server.js
 function registerConnectionHandler(wss) {
   wss.on('authenticated-connection', (ws, user) => {
-    console.log('✅ WebSocket client connected:', user.firstName);
+    // Route by path
+    if (ws._pathname === '/viz') {
+      // Only allow the single email to watch
+      if (user.email !== VIZ_EMAIL) {
+        ws.close(4003, 'Forbidden');
+        return;
+      }
+      vizSockets.add(ws);
+      console.log('✅ Viz viewer connected:', user.email);
+
+      ws.on('close', () => {
+        vizSockets.delete(ws);
+        console.log('Viz viewer disconnected');
+      });
+      return;
+    }
+
+    // Default path: camera socket (existing behavior)
+    console.log('✅ WebSocket client connected (camera):', user.firstName);
     userSockets.set(user.id, ws);
 
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data);
         const eventType = normalizeEventType(message.eventType);
-        const enrichedMessage = { ...message, userId: user.id };
+        const enrichedMessage = { ...message, userId: user.id, eventType };
         await redisClient.rPush('image_queue', JSON.stringify(enrichedMessage));
         console.log(`📨 Pushed message from ${user.firstName}`);
       } catch (err) {
@@ -51,8 +74,8 @@ function registerConnectionHandler(wss) {
     });
 
     ws.on('close', () => {
-      console.log('WebSocket client disconnected');
       userSockets.delete(user.id);
+      console.log('WebSocket client disconnected (camera)');
     });
   });
 }
@@ -60,5 +83,6 @@ function registerConnectionHandler(wss) {
 module.exports = {
   setupWebSocket,
   registerConnectionHandler,
-  userSockets
+  userSockets,
+  vizSockets
 };
